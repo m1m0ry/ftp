@@ -26,6 +26,15 @@ go run main.go --action list
 
 ### todo
 - 文件上传，下载，校验
+- 多文件上传
 
 ### ~ 3day
-- day 1：
+- day 1：上传,多文件上传
+- day 2；下载,校验和
+
+### then
+- 校验和,上传前计算，服务器端计算, 下载后计算
+- 多文件，并发
+### bash
+go run main.go --action upload -uploadFilepaths {path}
+go run main.go --action download -downloadFilenames {path}

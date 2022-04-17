@@ -1,9 +1,11 @@
 package main
 
 import (
+	"crypto/sha1"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -57,6 +59,78 @@ func listFiles(w http.ResponseWriter, request *http.Request) {
     w.WriteHeader(http.StatusOK)
 }
 
+// 处理upload逻辑
+func upload(w http.ResponseWriter, r *http.Request) {
+    file, handler, err := r.FormFile("filename")
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    defer file.Close()
+
+    hasher := &common.Hasher{
+		Reader: file,
+		Hash: sha1.New(),
+        Size: 0,
+	}
+
+    if(r.Header.Get("file-md5")!=hasher.Sum()){
+        http.Error(w, "md5错误", http.StatusBadRequest)
+        return
+    }
+    
+    fmt.Println(hasher.Sum())
+
+    f, err := os.OpenFile(path.Join(confs.StoreDir, handler.Filename), os.O_WRONLY|os.O_CREATE, 0666)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    defer f.Close()
+
+    io.Copy(f, file)
+}
+
+// 下载文件
+func download (w http.ResponseWriter, request *http.Request) {
+    //文件名
+    filename := request.FormValue("filename")
+
+    //打开文件
+    filePath := path.Join(confs.StoreDir, filename)
+    file, err := os.Open(filePath)
+    fstate, err := os.Stat(filePath)
+    if err != nil {
+        fmt.Printf("打开文件%s失败, err:%s\n", filePath, err)
+        http.Error(w, "文件打开失败", http.StatusBadRequest)
+        return
+    }
+    //结束后关闭文件
+    defer file.Close()
+
+    hasher := &common.Hasher{
+		Reader: file,
+		Hash: sha1.New(),
+        Size: 0,
+	}
+
+    //设置响应的header头
+    w.Header().Add("content-type", "application/octet-stream")
+    w.Header().Add("content-disposition", "attachment; filename=\""+filename+"\"")
+    w.Header().Add("file-md5", hasher.Sum())
+    w.Header().Add("file-size", strconv.FormatUint(uint64(fstate.Size()),10))
+
+    //fmt.Println(hasher.Size)
+
+    //将文件写至responseBody
+    _, err = io.Copy(w, hasher)
+    if err != nil {
+        http.Error(w, "文件下载失败", http.StatusInternalServerError)
+        return
+    }
+    
+}
+
 // 加载配置文件
 func loadConfig(configPath string) () {
     if !common.IsFile(configPath) {
@@ -90,7 +164,9 @@ func main() {
     loadConfig(*configPath)
 
     //路由设置
-    http.HandleFunc("/listFiles", listFiles)
+    http.HandleFunc("/list", listFiles)
+    http.HandleFunc("/upload", upload)
+    http.HandleFunc("/download", download)
 
     err = http.ListenAndServe(":"+strconv.Itoa(confs.Port), nil)
     if err != nil {
