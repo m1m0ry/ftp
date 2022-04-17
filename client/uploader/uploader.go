@@ -37,11 +37,11 @@ func UploadFile(filePath string) error {
 		fmt.Printf("error opening filePath: %s\n", filePath)
 		return err
 	}
-	
+
 	hasher := &common.Hasher{
 		Reader: fh,
-		Hash: sha1.New(),
-		Size: 0,
+		Hash:   sha1.New(),
+		Size:   0,
 	}
 
 	//iocopy
@@ -59,8 +59,8 @@ func UploadFile(filePath string) error {
 		return err
 	}
 
-	request.Header.Set("Content-Type",contentType)
-	request.Header.Add("file-md5",hasher.Sum())
+	request.Header.Set("Content-Type", contentType)
+	request.Header.Add("file-md5", hasher.Sum())
 	fmt.Println(hasher.Sum())
 
 	resp, err := http.DefaultClient.Do(request) // enter 键

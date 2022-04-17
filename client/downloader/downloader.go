@@ -14,7 +14,7 @@ import (
 )
 
 // DownloadFile 单个文件的下载
-func DownloadFile(filename string, downloadDir string) (error){
+func DownloadFile(filename string, downloadDir string) error {
 	if !common.IsDir(downloadDir) {
 		fmt.Printf("指定下载路径：%s 不存在\n", downloadDir)
 		return errors.New("指定下载路径不存在")
@@ -38,28 +38,31 @@ func DownloadFile(filename string, downloadDir string) (error){
 
 	hasher := &common.Hasher{
 		Reader: r.Body,
-		Hash: sha1.New(),
-		Size: 0,
+		Hash:   sha1.New(),
+		Size:   0,
 	}
 
-	size,_:=strconv.ParseUint(r.Header.Get("file-size"),10,64)
+	var size uint64 = 1
+	if r.Header.Get("file-size") != "" {
+		size, _ = strconv.ParseUint(r.Header.Get("file-size"), 10, 64)
+	}
+
+	//size,_:=strconv.ParseUint(r.Header.Get("file-size"),10,64)
 
 	reader := &common.Reader{
 		Reader: hasher,
-		Name: filename,
-		Total: size,
+		Name:   filename,
+		Total:  size,
 	}
-
-	if(r.Header.Get("file-md5")!=""&&r.Header.Get("file-md5")!=hasher.Sum()){
-		fmt.Println("文件下载错误")
-        return nil
-    }
-
-	fmt.Println(hasher.Sum())
 
 	_, err = io.Copy(f, reader)
 	if err != nil {
 		return err
+	}
+
+	if r.Header.Get("file-md5") != "" && r.Header.Get("file-md5") != hasher.Sum() {
+		fmt.Println("文件下载错误")
+		return nil
 	}
 	fmt.Printf("\n%s 文件下载成功，保存路径：%s\n", filename, filePath)
 	return nil

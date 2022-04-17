@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -90,12 +89,12 @@ func listFiles() {
 		return
 	}
 	defer r.Body.Close()
-	content, err := ioutil.ReadAll(r.Body)
-	fmt.Printf("%s",content)
+	//content, err := ioutil.ReadAll(r.Body)
+	//fmt.Printf("%s",content)
 	var fileinfos common.ListFileInfos
 	err = json.NewDecoder(r.Body).Decode(&fileinfos)
 	if err != nil {
-		fmt.Println("获取文件列表信息失败")
+		fmt.Println("json转换失败")
 		return
 	}
 
@@ -137,9 +136,9 @@ func main() {
 		// 列出文件
 		listFiles()
 	//case "host":
-		// 网络发现
-		//host()
-	//default:
+	// 网络发现
+	//host()
+	default:
 		fmt.Printf("unknow action: %s\n", *action)
 		os.Exit(-1)
 	}
