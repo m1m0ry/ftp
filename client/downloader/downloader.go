@@ -157,19 +157,19 @@ func Download(filename string, downloadDir string) error {
 		default:
 			{
 				fileInfo.Put(filePath, off)
-				fmt.Println(off)
 				part := common.MaxPart
 				if off > size-common.MaxPart {
 					part = size - off
 				}
-
 				go downloadPart(filename, filePath, off, part, ack)
 				off = off + part
 			}
 		}
 	}
 
-	fileInfo.Delete(filePath)
+	if fileInfo.IsDone(filePath) > size-common.MaxPart {
+		fileInfo.Delete(filePath)
+	}
 
 	return nil
 }
