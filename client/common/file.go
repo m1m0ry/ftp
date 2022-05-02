@@ -5,6 +5,7 @@ type FileInfo struct {
 	Filename string `json:"name"`
 	Filesize int64  `json:"size"`
 	Offset   int64  `json:"offset"`
+	Status   bool   `json:"status"`
 }
 
 // 文件列表

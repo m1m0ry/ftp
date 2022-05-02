@@ -116,6 +116,7 @@ func info(w http.ResponseWriter, request *http.Request) {
 		Filename: fstate.Name(),
 		Filesize: fstate.Size(),
 		Offset:   0,
+		Status: true,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

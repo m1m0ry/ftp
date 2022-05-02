@@ -34,7 +34,7 @@ func DownloadFile(filename string, downloadDir string) error {
 	filePath := path.Join(downloadDir, filename)
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		fmt.Printf(err.Error())
+		log.Println(err.Error())
 		return err
 	}
 	defer f.Close()
@@ -123,6 +123,8 @@ func Download(filename string, downloadDir string) error {
 		off = off + part
 	}
 
+	fileInfo.Delete(filePath)
+
 	return nil
 }
 
@@ -151,7 +153,7 @@ func downloadPart(filename string, filePath string, offset int64, size int64, ac
 
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		fmt.Printf(err.Error())
+		log.Println(err.Error())
 		return err
 	}
 	defer f.Close()

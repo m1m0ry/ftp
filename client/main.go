@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,7 +25,7 @@ var globalWait sync.WaitGroup
 // 定义命令行参数对应的变量
 var serverIP = flag.String("ip", "127.0.0.1", "服务器地址,默认本机")
 var serverPort = flag.Int("port", 10808, "服务器端口,默认10808")
-var action = flag.String("action", "", "upload, download list or host")
+var action = flag.String("action", "", "upload, download list or history")
 var uploadFilepaths = flag.String("uploadFilepaths", "", "上传文件路径,多个文件路径用空格相隔")
 var downloadFilenames = flag.String("downloadFilenames", "", "下载文件名")
 var downloadDir = flag.String("downloadDir", "download", "下载路径，默认当前目录")
@@ -117,6 +120,73 @@ func listFiles() {
 	fmt.Println(table)
 }
 
+// history 列出文件历史
+func history(downloadDir string) {
+	files, err := ioutil.ReadDir(downloadDir)
+	if err != nil {
+		fmt.Println("读文件夹失败", downloadDir)
+	}
+
+	fileinfos := common.ListFileInfos{
+		Files: []common.FileInfo{},
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		tmpFile := path.Join(downloadDir, file.Name())
+		var info common.FileInfo
+
+		if strings.HasSuffix(tmpFile, ".2downloading") {
+			continue
+		} else if strings.HasSuffix(tmpFile, ".downloading") {
+			content, _ := ioutil.ReadFile(tmpFile)
+			err := json.Unmarshal(content, &info)
+			if err != nil {
+				log.Fatal("unmarshal err: ", err)
+			}
+			fileinfos.Files = append(fileinfos.Files, info)
+			continue
+		} else {
+			fstate, err := os.Stat(tmpFile)
+			if err != nil {
+				fmt.Println("读取文件失败")
+				continue
+			}
+			info = common.FileInfo{
+				Filename: fstate.Name(),
+				Filesize: fstate.Size(),
+			}
+			fileinfos.Files = append(fileinfos.Files, info)
+		}
+	}
+
+	table, err := gotable.Create("name", "size", "status")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	for _, fileinfo := range fileinfos.Files {
+		statu := "complete"
+
+		if fileinfo.Status == true {
+			statu = "downloading"
+		}
+
+		err := table.AddRow([]string{fileinfo.Filename, strconv.FormatInt(fileinfo.Filesize, 10), statu})
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+	}
+
+	//边框
+	//table.CloseBorder()
+	fmt.Println(table)
+}
+
 func main() {
 
 	// 解析传入的参数
@@ -135,6 +205,8 @@ func main() {
 	case "list":
 		// 列出文件
 		listFiles()
+	case "history":
+		history(*downloadDir)
 	//case "host":
 	// 网络发现
 	//host()

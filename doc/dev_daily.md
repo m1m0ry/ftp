@@ -68,3 +68,6 @@ go run main.go --action download -downloadFilenames {path}
 ### b
 - 智能分片
 - 多线程下载
+- 下载进度
+- 下载历史
+- 清理下载缓存
