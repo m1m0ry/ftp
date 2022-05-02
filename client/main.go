@@ -20,8 +20,8 @@ import (
 var globalWait sync.WaitGroup
 
 // 定义命令行参数对应的变量
-var serverIP = flag.String("ip", "127.0.0.1", "服务IP")
-var serverPort = flag.Int("port", 10808, "服务端口")
+var serverIP = flag.String("ip", "127.0.0.1", "服务器地址,默认本机")
+var serverPort = flag.Int("port", 10808, "服务器端口,默认10808")
 var action = flag.String("action", "", "upload, download list or host")
 var uploadFilepaths = flag.String("uploadFilepaths", "", "上传文件路径,多个文件路径用空格相隔")
 var downloadFilenames = flag.String("downloadFilenames", "", "下载文件名")

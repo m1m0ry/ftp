@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"github.com/m1m0ry/golang/ftp/server/common"
+	"github.com/m1m0ry/golang/ftp/server/down"
 )
 
 var configPath = flag.String("configPath", "./etc/config.json", "服务配置文件")
@@ -44,7 +45,7 @@ func listFiles(w http.ResponseWriter, request *http.Request) {
 		finfo := common.FileInfo{
 			Filename: fstate.Name(),
 			Filesize: fstate.Size(),
-			Filetype: "normal",
+			Offset:   0,
 		}
 
 		fileinfos.Files = append(fileinfos.Files, finfo)
@@ -80,9 +81,9 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer f.Close()
-    
+
 	io.Copy(f, hasher)
-    
+
 	if r.Header.Get("file-md5") != "" && r.Header.Get("file-md5") != hasher.Sum() {
 		http.Error(w, "md5错误", http.StatusBadRequest)
 		return
@@ -93,39 +94,36 @@ func upload(w http.ResponseWriter, r *http.Request) {
 func download(w http.ResponseWriter, request *http.Request) {
 	//文件名
 	filename := request.FormValue("filename")
-
-	//打开文件
 	filePath := path.Join(confs.StoreDir, filename)
-	file, err := os.Open(filePath)
+	offset, _ := strconv.ParseUint(request.FormValue("offset"), 10, 64)
+	size, _ := strconv.ParseUint(request.FormValue("size"), 10, 64)
+	down.Download(filePath, offset, size, w)
+}
+
+// 文件元数据
+func info(w http.ResponseWriter, request *http.Request) {
+
+	filename := request.FormValue("filename")
+	filePath := path.Join(confs.StoreDir, filename)
+
 	fstate, err := os.Stat(filePath)
 	if err != nil {
-		fmt.Printf("打开文件%s失败, err:%s\n", filePath, err)
-		http.Error(w, "文件打开失败", http.StatusBadRequest)
-		return
-	}
-	//结束后关闭文件
-	defer file.Close()
-
-	hasher := &common.Hasher{
-		Reader: file,
-		Hash:   sha1.New(),
-		Size:   0,
+		fmt.Println("读取文件失败")
 	}
 
-    //设置响应的header头
-	w.Header().Add("content-type", "application/octet-stream")
-	w.Header().Add("content-disposition", "attachment; filename=\""+filename+"\"")
-	w.Header().Add("file-size", strconv.FormatUint(uint64(fstate.Size()), 10))
+	finfo := common.FileInfo{
+		Filename: fstate.Name(),
+		Filesize: fstate.Size(),
+		Offset:   0,
+	}
 
-	//将文件写至responseBody
-	_, err = io.Copy(w, hasher)
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(finfo)
 	if err != nil {
-		http.Error(w, "文件下载失败", http.StatusInternalServerError)
-		return
+		fmt.Println("压缩文件列表失败")
+		http.Error(w, "服务异常", http.StatusBadRequest)
 	}
-
-	w.Header().Add("file-md5", hasher.Sum())
-
+	w.WriteHeader(http.StatusOK)
 }
 
 // 加载配置文件
@@ -164,6 +162,7 @@ func main() {
 	http.HandleFunc("/list", listFiles)
 	http.HandleFunc("/upload", upload)
 	http.HandleFunc("/download", download)
+	http.HandleFunc("/info", info)
 
 	err = http.ListenAndServe(":"+strconv.Itoa(confs.Port), nil)
 	if err != nil {
