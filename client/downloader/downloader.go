@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"bufio"
 	"crypto/sha1"
 	"encoding/json"
 	"errors"
@@ -110,17 +111,61 @@ func Download(filename string, downloadDir string) error {
 
 	//v 0.01 单线程下载
 	ack := make(chan bool)
-	go func() { ack <- true }()
-	for off := offset; <-ack && off < size; {
 
-		fileInfo.Put(filePath, off)
-		part := common.MaxPart
-		if off > size-common.MaxPart {
-			part = size - off
+	pau := make(chan bool)
+
+	go func(chan bool) {
+		ack <- true
+		var (
+			pause string
+			err   error
+		)
+		for {
+			if pause, err = bufio.NewReader(os.Stdin).ReadString('\n'); err != nil {
+				return
+			}
+			switch pause {
+			case "p\n":
+				pau <- true
+			case "P\n":
+				pau <- true
+				//case "s\n":
+				//	pau <- false
+				//case "S\n":
+				//	pau <- false
+			}
 		}
+	}(pau)
 
-		go downloadPart(filename, filePath, off, part, ack)
-		off = off + part
+	for off := offset; <-ack && off < size; {
+		select {
+		case <-pau:
+			{
+				loop := true
+				fmt.Println("pause")
+				for loop {
+					select {
+					case <-pau:
+						loop = false
+						fmt.Println("start")
+						//break
+					default:
+					}
+				}
+			}
+		default:
+			{
+				fileInfo.Put(filePath, off)
+				fmt.Println(off)
+				part := common.MaxPart
+				if off > size-common.MaxPart {
+					part = size - off
+				}
+
+				go downloadPart(filename, filePath, off, part, ack)
+				off = off + part
+			}
+		}
 	}
 
 	fileInfo.Delete(filePath)

@@ -71,3 +71,4 @@ go run main.go --action download -downloadFilenames {path}
 - 下载进度
 - 下载历史
 - 清理下载缓存
+- 自动续传
