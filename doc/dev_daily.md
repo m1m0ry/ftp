@@ -60,3 +60,11 @@ go run main.go --action download -downloadFilenames {path}
 ### todo
 - 分片上传/下载
 - rowdata 数据库
+
+### a
+- 单线程下载
+- 断点续传
+
+### b
+- 智能分片
+- 多线程下载

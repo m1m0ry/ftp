@@ -13,7 +13,7 @@ import (
 )
 
 //下载所选文件的对应部分
-func Download(filePath string, offset uint64, size uint64, w http.ResponseWriter) {
+func Download(filePath string, offset int64, size int64, w http.ResponseWriter) {
 	filename := filepath.Base(filePath)
 	file, err := os.Open(filePath)
 	fstate, _ := os.Stat(filePath)
@@ -24,6 +24,9 @@ func Download(filePath string, offset uint64, size uint64, w http.ResponseWriter
 	}
 	//结束后关闭文件
 	defer file.Close()
+
+	//设置偏移量
+	file.Seek(offset,io.SeekStart)
 
 	hasher := &common.Hasher{
 		Reader: file,
@@ -36,13 +39,12 @@ func Download(filePath string, offset uint64, size uint64, w http.ResponseWriter
 	w.Header().Add("content-disposition", "attachment; filename=\""+filename+"\"")
 
 	if offset == size && size == 0 {
-		w.Header().Add("file-size", strconv.FormatUint(uint64(fstate.Size()), 10))
+		w.Header().Add("file-size", strconv.FormatInt(fstate.Size(), 10))
 
 		//将文件写至responseBody
 		_, err = io.Copy(w, hasher)
 	}else{
-		w.Header().Add("file-size", strconv.FormatUint(size, 10))
-
+		w.Header().Add("file-size", strconv.FormatInt(size, 10))
 		buf:=make([]byte,size)
 		hasher.Read(buf)
 		_, err = w.Write(buf)

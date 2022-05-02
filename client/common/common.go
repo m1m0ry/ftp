@@ -5,9 +5,6 @@ import (
 	"io"
 )
 
-//服务器地址
-var BaseUrl string
-
 //下载进度
 type Reader struct {
 	io.Reader

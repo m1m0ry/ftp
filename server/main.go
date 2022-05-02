@@ -95,9 +95,10 @@ func download(w http.ResponseWriter, request *http.Request) {
 	//文件名
 	filename := request.FormValue("filename")
 	filePath := path.Join(confs.StoreDir, filename)
-	offset, _ := strconv.ParseUint(request.FormValue("offset"), 10, 64)
-	size, _ := strconv.ParseUint(request.FormValue("size"), 10, 64)
-	down.Download(filePath, offset, size, w)
+	fmt.Println(request)
+	offset, _ := strconv.ParseUint(request.Header.Get("offset"), 10, 64)
+	size, _ := strconv.ParseUint(request.Header.Get("size"), 10, 64)
+	down.Download(filePath, int64(offset), int64(size), w)
 }
 
 // 文件元数据

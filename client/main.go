@@ -31,7 +31,7 @@ var downloadDir = flag.String("downloadDir", "download", "下载路径，默认�
 func downloadFile(filename string, downloadDir string) {
 	defer globalWait.Done()
 
-	err := downloader.DownloadFile(filename, downloadDir)
+	err := downloader.Download(filename, downloadDir)
 	if err != nil {
 		fmt.Printf("%s文件下载失败", filename)
 	}
