@@ -152,6 +152,7 @@ func Download(filename string, downloadDir string) error {
 					default:
 					}
 				}
+				go func() { ack <- true }()
 			}
 		default:
 			{
