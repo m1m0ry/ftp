@@ -108,19 +108,19 @@ func Download(filename string, downloadDir string) error {
 		offset = 0
 	}
 
-	//v 0.01 单线程下载 
+	//v 0.01 单线程下载
 	ack := make(chan bool)
-	go func(){ack<-true}() 
-	for off:=offset;<-ack&&off<size;{
+	go func() { ack <- true }()
+	for off := offset; <-ack && off < size; {
 
-		fileInfo.Put(filePath,off)
-		part:=common.MaxPart
-		if(off>size-common.MaxPart){
-			part=size-off
+		fileInfo.Put(filePath, off)
+		part := common.MaxPart
+		if off > size-common.MaxPart {
+			part = size - off
 		}
 
 		go downloadPart(filename, filePath, off, part, ack)
-		off=off+part
+		off = off + part
 	}
 
 	return nil
@@ -162,9 +162,9 @@ func downloadPart(filename string, filePath string, offset int64, size int64, ac
 		Size:   0,
 	}
 
-	buf:=make([]byte,size)
-    hasher.Read(buf)
-	_, err = f.WriteAt(buf,offset)
+	buf := make([]byte, size)
+	hasher.Read(buf)
+	_, err = f.WriteAt(buf, offset)
 	if err != nil {
 		return err
 	}

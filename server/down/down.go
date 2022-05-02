@@ -26,7 +26,7 @@ func Download(filePath string, offset int64, size int64, w http.ResponseWriter) 
 	defer file.Close()
 
 	//设置偏移量
-	file.Seek(offset,io.SeekStart)
+	file.Seek(offset, io.SeekStart)
 
 	hasher := &common.Hasher{
 		Reader: file,
@@ -43,14 +43,13 @@ func Download(filePath string, offset int64, size int64, w http.ResponseWriter) 
 
 		//将文件写至responseBody
 		_, err = io.Copy(w, hasher)
-	}else{
+	} else {
 		w.Header().Add("file-size", strconv.FormatInt(size, 10))
-		buf:=make([]byte,size)
+		buf := make([]byte, size)
 		hasher.Read(buf)
 		_, err = w.Write(buf)
 	}
 
-	
 	if err != nil {
 		http.Error(w, "文件下载失败", http.StatusInternalServerError)
 		return
