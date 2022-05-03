@@ -12,7 +12,9 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/m1m0ry/golang/ftp/client/common"
 	"github.com/m1m0ry/golang/ftp/client/db"
 )
@@ -80,16 +82,16 @@ func Download(filename string, downloadDir string) error {
 	filePath := path.Join(downloadDir, filename)
 	infoUrl := common.BaseUrl + "info?filename=" + filename
 
-	fileInfo := db.Init(filePath)
+	fileInfo, err := db.InitFileStore(filePath)
 
 	var offset int64
 	var size int64
-	if fileInfo.Old {
+	if err == nil {
 		offset = fileInfo.IsDone(filePath)
 		var info common.FileInfo
 		err := json.Unmarshal(fileInfo.Get(filePath), &info)
 		if err != nil {
-			log.Fatal("unmarshal err: ", err)
+			log.Fatal("file unmarshal err: ", err)
 		}
 		size = info.Filesize
 	} else {
@@ -102,7 +104,7 @@ func Download(filename string, downloadDir string) error {
 		var info common.FileInfo
 		err = json.NewDecoder(r.Body).Decode(&info)
 		if err != nil {
-			log.Fatal("unmarshal err: ", err)
+			log.Fatal("http unmarshal err: ", err)
 		}
 		fileInfo.Post(filePath, info)
 		size = info.Filesize
@@ -156,6 +158,8 @@ func Download(filename string, downloadDir string) error {
 			}
 		default:
 			{
+				fmt.Printf("\r%s", strings.Repeat(" ", 35))
+				fmt.Printf("\rDownloading... %s complete", humanize.Bytes(uint64(off)))
 				fileInfo.Put(filePath, off)
 				part := common.MaxPart
 				if off > size-common.MaxPart {
@@ -167,6 +171,7 @@ func Download(filename string, downloadDir string) error {
 		}
 	}
 
+	fmt.Println()
 	if fileInfo.IsDone(filePath) > size-common.MaxPart {
 		fileInfo.Delete(filePath)
 	}

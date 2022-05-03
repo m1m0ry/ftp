@@ -67,8 +67,13 @@ go run main.go --action download -downloadFilenames {path}
 
 ### b
 - [] 智能分片
-- [] 多线程下载
-- [] 下载进度
+- [x] 下载进度
 - [x] 下载历史
 - [x] 清理下载缓存
 - [] 自动续传
+
+### c
+- [] 多线程下载
+
+### d
+- [] websocket

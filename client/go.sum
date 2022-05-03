@@ -1,2 +1,4 @@
+github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
+github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/liushuochen/gotable v0.0.0-20220402112704-80b43cc0b390 h1:0kaXPlVlEjEHZN1rLedym6Ipaff7IfG5Pkk9TbHYaEI=
 github.com/liushuochen/gotable v0.0.0-20220402112704-80b43cc0b390/go.mod h1:CxUy8nDvutaC1pOfaG9TRoYwdHHqoNstSPPKhomC9k8=
