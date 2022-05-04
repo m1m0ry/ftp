@@ -70,7 +70,7 @@ go run main.go --action download -downloadFilenames {path}
 - [x] 下载进度
 - [x] 下载历史
 - [x] 清理下载缓存
-- [] 自动续传
+- [x] 恢复上传
 
 ### c
 - [] 多线程下载

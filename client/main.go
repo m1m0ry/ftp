@@ -21,11 +21,12 @@ import (
 
 // 定义全局变量
 var globalWait sync.WaitGroup
+var globalResume sync.WaitGroup
 
 // 定义命令行参数对应的变量
 var serverIP = flag.String("ip", "127.0.0.1", "服务器地址,默认本机")
 var serverPort = flag.Int("port", 10808, "服务器端口,默认10808")
-var action = flag.String("action", "", "upload, download list or history")
+var action = flag.String("action", "", "upload, download, list, history, or resume")
 var uploadFilepaths = flag.String("uploadFilepaths", "", "上传文件路径,多个文件路径用空格相隔")
 var downloadFilenames = flag.String("downloadFilenames", "", "下载文件名")
 var downloadDir = flag.String("downloadDir", "download", "下载路径，默认当前目录")
@@ -120,8 +121,7 @@ func listFiles() {
 	fmt.Println(table)
 }
 
-// history 列出文件历史
-func history(downloadDir string) {
+func loadFileInfo(downloadDir string) common.ListFileInfos {
 	files, err := ioutil.ReadDir(downloadDir)
 	if err != nil {
 		fmt.Println("读文件夹失败", downloadDir)
@@ -161,6 +161,35 @@ func history(downloadDir string) {
 			fileinfos.Files = append(fileinfos.Files, info)
 		}
 	}
+
+	return fileinfos
+}
+
+func resumeFile(Info common.FileInfo, downloadDir string) {
+	defer globalResume.Done()
+
+	err := downloader.Resume(Info, downloadDir)
+	if err != nil {
+		fmt.Printf("%s文件下载失败", Info.Filename)
+	}
+}
+
+func resumeFiles(downloadDir string) {
+	fileinfos := loadFileInfo(downloadDir)
+
+	for _, fileinfo := range fileinfos.Files {
+		if fileinfo.Status == true {
+			globalResume.Add(1)
+			go resumeFile(fileinfo, downloadDir)
+		}
+	}
+	globalResume.Wait()
+}
+
+// history 列出文件历史
+func history(downloadDir string) {
+
+	fileinfos := loadFileInfo(downloadDir)
 
 	table, err := gotable.Create("name", "size", "status")
 	if err != nil {
@@ -207,6 +236,8 @@ func main() {
 		listFiles()
 	case "history":
 		history(*downloadDir)
+	case "resume":
+		resumeFiles(*downloadDir)
 	//case "host":
 	// 网络发现
 	//host()

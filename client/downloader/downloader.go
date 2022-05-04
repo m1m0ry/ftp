@@ -74,6 +74,31 @@ func DownloadFile(filename string, downloadDir string) error {
 	return nil
 }
 
+//暂停
+func pause(ack, pau chan bool) {
+	//初始化启动
+	ack <- true
+	var (
+		pause string
+		err   error
+	)
+	for {
+		if pause, err = bufio.NewReader(os.Stdin).ReadString('\n'); err != nil {
+			return
+		}
+		switch pause {
+		case "p\n":
+			pau <- true
+		case "P\n":
+			pau <- true
+			//case "s\n":
+			//	pau <- false
+			//case "S\n":
+			//	pau <- false
+		}
+	}
+}
+
 func Download(filename string, downloadDir string) error {
 	if !common.IsDir(downloadDir) {
 		fmt.Printf("指定下载路径：%s 不存在\n", downloadDir)
@@ -81,7 +106,7 @@ func Download(filename string, downloadDir string) error {
 	}
 	filePath := path.Join(downloadDir, filename)
 	infoUrl := common.BaseUrl + "info?filename=" + filename
-
+	targetUrl := common.BaseUrl + "download?filename=" + filename
 	fileInfo, err := db.InitFileStore(filePath)
 
 	var offset int64
@@ -116,28 +141,7 @@ func Download(filename string, downloadDir string) error {
 
 	pau := make(chan bool)
 
-	go func(chan bool) {
-		ack <- true
-		var (
-			pause string
-			err   error
-		)
-		for {
-			if pause, err = bufio.NewReader(os.Stdin).ReadString('\n'); err != nil {
-				return
-			}
-			switch pause {
-			case "p\n":
-				pau <- true
-			case "P\n":
-				pau <- true
-				//case "s\n":
-				//	pau <- false
-				//case "S\n":
-				//	pau <- false
-			}
-		}
-	}(pau)
+	go pause(ack, pau)
 
 	for off := offset; <-ack && off < size; {
 		select {
@@ -165,7 +169,7 @@ func Download(filename string, downloadDir string) error {
 				if off > size-common.MaxPart {
 					part = size - off
 				}
-				go downloadPart(filename, filePath, off, part, ack)
+				go downloadPart(targetUrl, filePath, off, part, ack)
 				off = off + part
 			}
 		}
@@ -179,12 +183,62 @@ func Download(filename string, downloadDir string) error {
 	return nil
 }
 
-func downloadPart(filename string, filePath string, offset int64, size int64, ack chan bool) error {
+func Resume(info common.FileInfo, downloadDir string) error {
+	if !common.IsDir(downloadDir) {
+		fmt.Printf("指定下载路径：%s 不存在\n", downloadDir)
+		return errors.New("指定下载路径不存在")
+	}
 
-	targetUrl := common.BaseUrl + "download?filename=" + filename
+	url := fmt.Sprintf("http://%s/", info.Host)
+	filePath := path.Join(downloadDir, info.Filename)
+	offInfo, _ := db.InitFileStore(filePath)
 
+	offset := offInfo.IsDone(filePath)
+	size := info.Filesize
+
+	//v 0.01 单线程下载
+	ack := make(chan bool)
+	pau := make(chan bool)
+
+	go pause(ack, pau)
+
+	for off := offset; <-ack && off < size; {
+		select {
+		case <-pau:
+			{
+				loop := true
+				fmt.Println("pause")
+				for loop {
+					select {
+					case <-pau:
+						loop = false
+						fmt.Println("start")
+						//break
+					default:
+					}
+				}
+				go func() { ack <- true }()
+			}
+		default:
+			{
+				offInfo.Put(filePath, off)
+				part := common.MaxPart
+				if off > size-common.MaxPart {
+					part = size - off
+				}
+				go downloadPart(url, filePath, off, part, ack)
+				off = off + part
+			}
+		}
+	}
+	if offInfo.IsDone(filePath) > size-common.MaxPart {
+		offInfo.Delete(filePath)
+	}
+	return nil
+}
+
+func downloadPart(targetUrl string, filePath string, offset int64, size int64, ack chan bool) error {
 	//请求
-
 	request, err := http.NewRequest(http.MethodGet, targetUrl, nil)
 	if err != nil {
 		return err
