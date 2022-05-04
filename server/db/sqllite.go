@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"path/filepath"
 
 	"github.com/m1m0ry/golang/ftp/server/common"
@@ -20,9 +21,9 @@ func InitSqliteStore(filePath string) (Store, error) {
     CREATE TABLE IF NOT EXISTS fileinfo(
         uid INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
-		size INTEGER NOT NULL
-		offset INTEGER
-		status INTEGER
+		size INTEGER NOT NULL,
+		offset INTEGER,
+		status INTEGER,
 		host TEXT
     );
     `
@@ -44,7 +45,7 @@ func (sqlite *SqliteStore) Close(filePath string) {
 
 func (sqlite *SqliteStore) Get(filePath string) []byte {
 	filename := filepath.Base(filePath)
-	rows, err := sqlite.sqldb.Query("SELECT * FROM fileinfo WHERE name=" + filename)
+	rows, err := sqlite.sqldb.Query("SELECT * FROM fileinfo WHERE name=\"" + filename + "\"")
 	checkErr(err)
 
 	var (
@@ -99,7 +100,7 @@ func (sqlite *SqliteStore) Put(filePath string, offset int64) {
 
 func (sqlite *SqliteStore) IsDone(filePath string) int64 {
 	filename := filepath.Base(filePath)
-	rows, err := sqlite.sqldb.Query("SELECT offset FROM fileinfo WHERE name=" + filename)
+	rows, err := sqlite.sqldb.Query("SELECT offset FROM fileinfo WHERE name=\"" + filename + "\"")
 	checkErr(err)
 
 	var offset int64
@@ -114,6 +115,7 @@ func (sqlite *SqliteStore) IsDone(filePath string) int64 {
 
 func (sqlite *SqliteStore) Delete(filePath string) {
 	filename := filepath.Base(filePath)
+
 	stmt, err := sqlite.sqldb.Prepare("delete from fileinfo where name=?")
 	checkErr(err)
 
@@ -123,6 +125,6 @@ func (sqlite *SqliteStore) Delete(filePath string) {
 
 func checkErr(err error) {
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 }
