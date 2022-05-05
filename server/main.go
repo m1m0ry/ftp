@@ -13,8 +13,12 @@ import (
 	"path"
 	"strconv"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/m1m0ry/golang/ftp/server/common"
+	"github.com/m1m0ry/golang/ftp/server/db"
 	"github.com/m1m0ry/golang/ftp/server/down"
+	"github.com/m1m0ry/golang/ftp/server/up"
 )
 
 var configPath = flag.String("configPath", "./etc/config.json", "服务配置文件")
@@ -60,6 +64,34 @@ func listFiles(w http.ResponseWriter, request *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+var upgrader = websocket.Upgrader{} // use default options
+
+func wsUpload(w http.ResponseWriter, r *http.Request) {
+	c, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Print("upgrade:", err)
+		return
+	}
+	defer c.Close()
+	for {
+		var uploader common.Uploader
+		err := c.ReadJSON(uploader)
+		if err != nil {
+			log.Println("read:", err)
+			break
+		}
+		go func() {
+			err = up.Upload(uploader, path.Join(confs.StoreDir, uploader.Name))
+			if err != nil {
+				err = c.WriteJSON(err)
+				if err != nil {
+					log.Println("write:", err)
+				}
+			}
+		}()
+	}
+}
+
 // 处理upload逻辑
 func upload(w http.ResponseWriter, r *http.Request) {
 	file, handler, err := r.FormFile("filename")
@@ -102,30 +134,44 @@ func download(w http.ResponseWriter, request *http.Request) {
 
 // 文件元数据
 func info(w http.ResponseWriter, request *http.Request) {
+	if request.Method == "Get" {
+		filename := request.FormValue("filename")
+		filePath := path.Join(confs.StoreDir, filename)
 
-	filename := request.FormValue("filename")
-	filePath := path.Join(confs.StoreDir, filename)
+		fstate, err := os.Stat(filePath)
+		if err != nil {
+			fmt.Println("读取文件失败")
+		}
 
-	fstate, err := os.Stat(filePath)
-	if err != nil {
-		fmt.Println("读取文件失败")
+		finfo := common.FileInfo{
+			Filename: fstate.Name(),
+			Filesize: fstate.Size(),
+			Offset:   0,
+			Status:   true,
+			Host:     request.Host,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(finfo)
+		if err != nil {
+			fmt.Println("压缩文件列表失败")
+			http.Error(w, "服务异常", http.StatusBadRequest)
+		}
+		w.WriteHeader(http.StatusOK)
+	} else {
+		var finfo common.FileInfo
+		err := json.NewDecoder(request.Body).Decode(&finfo)
+		if err != nil {
+			fmt.Println("文件信息读取失败")
+			http.Error(w, "信息读取失败", http.StatusBadRequest)
+		}
+		if finfo.Filesize > 64*1024*1024*1024 {
+			http.Error(w, "文件过大, 暂不支持超过64G的文件", http.StatusPreconditionFailed)
+		}
+		filePath := path.Join(confs.StoreDir, finfo.Filename)
+		info, _ := db.InitSqliteStore(filePath)
+		info.Post(filePath, finfo)
 	}
-
-	finfo := common.FileInfo{
-		Filename: fstate.Name(),
-		Filesize: fstate.Size(),
-		Offset:   0,
-		Status:   true,
-		Host:     request.Host,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(finfo)
-	if err != nil {
-		fmt.Println("压缩文件列表失败")
-		http.Error(w, "服务异常", http.StatusBadRequest)
-	}
-	w.WriteHeader(http.StatusOK)
 }
 
 // 加载配置文件
@@ -163,6 +209,7 @@ func main() {
 	//路由设置
 	http.HandleFunc("/list", listFiles)
 	http.HandleFunc("/upload", upload)
+	http.HandleFunc("/wsupload", wsUpload)
 	http.HandleFunc("/download", download)
 	http.HandleFunc("/info", info)
 
