@@ -131,6 +131,8 @@ func loadFileInfo(downloadDir string) common.ListFileInfos {
 		Files: []common.FileInfo{},
 	}
 
+	infoMap := make(map[string]common.FileInfo)
+
 	for _, file := range files {
 		if file.IsDir() {
 			continue
@@ -146,7 +148,7 @@ func loadFileInfo(downloadDir string) common.ListFileInfos {
 			if err != nil {
 				log.Fatal("unmarshal err: ", err)
 			}
-			fileinfos.Files = append(fileinfos.Files, info)
+			infoMap[info.Filename] = info
 			continue
 		} else {
 			fstate, err := os.Stat(tmpFile)
@@ -158,8 +160,14 @@ func loadFileInfo(downloadDir string) common.ListFileInfos {
 				Filename: fstate.Name(),
 				Filesize: fstate.Size(),
 			}
-			fileinfos.Files = append(fileinfos.Files, info)
+			if _, ok := infoMap[info.Filename]; ok != true {
+				infoMap[info.Filename] = info
+			}
 		}
+	}
+
+	for _, v := range infoMap {
+		fileinfos.Files = append(fileinfos.Files, v)
 	}
 
 	return fileinfos
