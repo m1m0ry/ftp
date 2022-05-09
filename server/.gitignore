@@ -4,3 +4,4 @@ upload
 _test
 *.log
 *.db
+*.exe
