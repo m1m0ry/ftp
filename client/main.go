@@ -27,9 +27,9 @@ var globalResume sync.WaitGroup
 var serverIP = flag.String("ip", "127.0.0.1", "服务器地址,默认本机")
 var serverPort = flag.Int("port", 10808, "服务器端口,默认10808")
 var action = flag.String("action", "", "upload, download, list, history, or resume")
-var uploadFilepaths = flag.String("uploadFilepaths", "", "上传文件路径,多个文件路径用空格相隔")
-var downloadFilenames = flag.String("downloadFilenames", "", "下载文件名")
-var downloadDir = flag.String("downloadDir", "download", "下载路径，默认当前目录")
+var uploadFilepaths = flag.String("upfile", "", "上传文件路径,多个文件路径用空格相隔")
+var downloadFilenames = flag.String("downfile", "", "下载文件名")
+var downloadDir = flag.String("downDir", "download", "下载路径，默认当前目录")
 
 // 下载文件
 func downloadFile(filename string, downloadDir string) {
@@ -251,6 +251,7 @@ func main() {
 	//host()
 	default:
 		fmt.Printf("unknow action: %s\n", *action)
+		fmt.Println("使用-help获取更多信息")
 		os.Exit(-1)
 	}
 }

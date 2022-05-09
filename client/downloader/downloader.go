@@ -87,9 +87,20 @@ func pause(ack, pau chan bool) {
 			return
 		}
 		switch pause {
+		//linux
 		case "p\n":
 			pau <- true
 		case "P\n":
+			pau <- true
+			//macos
+		case "p\r":
+			pau <- true
+		case "P\r":
+			pau <- true
+			//win
+		case "p\r\n":
+			pau <- true
+		case "P\r\n":
 			pau <- true
 			//case "s\n":
 			//	pau <- false

@@ -1,2 +1,4 @@
 #下载文件夹
 download
+*.exe
+_test
